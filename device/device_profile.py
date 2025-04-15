@@ -7,7 +7,10 @@ from datetime import datetime
 from scapy.layers.inet import IP, TCP
 
 from alert_mech.alert_beep import beep_lock, beep
-from device.devices import DEVICES_LIST
+
+from device.devices import dev_list_lock
+with dev_list_lock:
+    from device.devices import DEVICES_LIST
 
 def setup_logger():
     logger = logging.getLogger("BRUTE_FORCE_DETECT")
@@ -40,7 +43,8 @@ class Device:
         self.cleaner_thread.start()
 
         self.lock = threading.Lock()
-        DEVICES_LIST[self.IP] = self
+        with dev_list_lock:
+            DEVICES_LIST[self.IP] = self
 
     def handle_packet(self, packet):
         flags = packet[TCP].flags
