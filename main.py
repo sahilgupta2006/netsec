@@ -6,9 +6,11 @@ from device.devices import dev_list_lock
 with dev_list_lock:
     from device.devices import DEVICES_LIST
 
-from sync.sync import outlier_lock
+from sync.sync import outlier_lock, sync_log_lock
 with outlier_lock:
     from sync.sync import out_of_sync
+with sync_log_lock:
+    from sync.sync import sync_log
 from ip.ips import IP_IN_NETWORK
 
 GREEN = "\033[92m"
@@ -112,8 +114,11 @@ def main():
                         if not out_of_sync.empty():
                             (ip, offset) = out_of_sync.get()
                             curr_ts = int(datetime.now(timezone.utc).timestamp())
-                            time_on_other_dev = datetime.utcfromtimestamp(curr_ts + offset)
+                            time_on_other_dev = datetime.fromtimestamp(curr_ts + offset, timezone.utc)
                             print(f"IP:- {ip} :- Time:- {time_on_other_dev}")
+                        
+                        elif not sync_log.empty():
+                            print(sync_log.get())
                     except KeyboardInterrupt:
                         print("\nReturning to main menu.")
                         break
