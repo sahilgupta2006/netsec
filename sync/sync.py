@@ -5,7 +5,6 @@ import ipaddress
 import queue
 import numpy as np
 import logging
-import statistics
 from scipy.stats import zscore
 from device.devices import dev_list_lock
 from scapy.layers.inet import IP, ICMP
