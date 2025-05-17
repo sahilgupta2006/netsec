@@ -1,5 +1,13 @@
 from scapy.all import *
 import time
+from datetime import datetime, timezone
+try:
+    # Python 3.9+
+    from zoneinfo import ZoneInfo
+except ImportError:
+    # For Python <3.9, install backports.zoneinfo
+    from backports.zoneinfo import ZoneInfo
+    
 from scapy.interfaces import ifaces
 from config.config import Config
 from device.devices import dev_list_lock
@@ -8,7 +16,7 @@ with dev_list_lock:
 
 from sync.sync import outlier_lock, sync_log_lock
 with outlier_lock:
-    from sync.sync import out_of_sync
+    from sync.sync import out_of_sync, outliers
 with sync_log_lock:
     from sync.sync import sync_log
 from ip.ips import IP_IN_NETWORK
@@ -20,15 +28,15 @@ def main():
     ifaces.show()
 
     print("")
-    # Config.NET_RANGE = "172.27.4.0/24"
-    # Config.MY_IP = "172.27.4.204"
+    # Config.NET_RANGE = "192.168.0.0/24"
+    # Config.MY_IP = "192.168.0.104"
     # Config.MY_MAC = "e8:65:38:0e:2c:59"
     # Config.IFACE = "Realtek RTL8852BE WiFi 6 802.11ax PCIe Adapter"
 
     Config.NET_RANGE = "172.17.15.0/24"
-    Config.MY_IP = "171.17.15.116"
-    Config.MY_MAC = "1c:69:7a:e7:f4:e8"
-    Config.IFACE = "eth0"
+    Config.MY_IP = "172.17.15.103"
+    Config.MY_MAC = "28:00:af:ae:9e:ab"
+    Config.IFACE = "Realtek PCIe GbE Family Controller"
 
     # Config.NET_RANGE = input("Enter the network range to monitor:- ")
     # Config.MY_IP = input("Enter the IPv4 Address of this PC (Monitoring PC):- ")
@@ -107,20 +115,45 @@ def main():
                 print("Commands: arp | dos | bruteforce (bf) | newdev | list [--ip, --dev] | about | config | sync-test | exit")
 
             elif ch == "sync-test":
-                threading.Thread(target=run_synchronize_test, daemon=True).start()
+                stop_event = threading.Event()
+                sync_thread = threading.Thread(target=run_synchronize_test, args=(stop_event,), daemon=True)
+                sync_thread.start()
                 print("Displaying Out of sync devices. Press Ctrl+C to return.")
                 while True:
+                    
                     try:
                         if not out_of_sync.empty():
-                            (ip, offset) = out_of_sync.get()
-                            curr_ts = int(datetime.now(timezone.utc).timestamp())
-                            time_on_other_dev = datetime.fromtimestamp(curr_ts + offset, timezone.utc)
+                            (ip, (type, ts)) = out_of_sync.get()
+                            time_on_other_dev = ""
+                            if type == "icmp":
+                                midnight_utc = datetime.now(timezone.utc).replace(
+                                    hour=0, minute=0, second=0, microsecond=0
+                                )
+                                packet_time_utc = midnight_utc + timedelta(milliseconds=ts)
+                                try:
+                                    local_tz = ZoneInfo("Asia/Kolkata")
+                                except Exception:
+                                    local_tz = timezone.utc
+
+                                time_on_other_dev = packet_time_utc.astimezone(local_tz)
+                            else:
+                                time_on_other_dev = datetime.fromtimestamp(ts, timezone.utc)
+                    
                             print(f"IP:- {ip} :- Time:- {time_on_other_dev}")
                         
                         elif not sync_log.empty():
                             print(sync_log.get())
+
                     except KeyboardInterrupt:
+                        stop_event.set()
+                        while not outliers.empty():
+                            (ip, diff) = outliers.get()
+                            hours, rem = divmod(diff, 3600)
+                            minutes, seconds = divmod(rem, 60)
+                            # ms, 
+                            print(f"IP:- {ip} is out of sync by {hours}:{minutes}:{seconds} hours.")
                         print("\nReturning to main menu.")
+                        
                         break
 
             elif ch == "list --ip":
