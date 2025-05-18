@@ -5,7 +5,6 @@ import ipaddress
 import queue
 import numpy as np
 import logging
-from scipy.stats import zscore
 from device.devices import dev_list_lock
 from scapy.layers.inet import IP, ICMP
 with dev_list_lock:
@@ -81,20 +80,22 @@ def run_synchronize_test(stop_event):
             if ip in IP_TIMESTAMP:
                 out_of_sync.put((ip, IP_TIMESTAMP[ip]))
         else:
-            ARR = []
-            for i in ABS_IP_TIMESTAMP_OFFSETS:
-                ARR.append(ABS_IP_TIMESTAMP_OFFSETS[i])
-
-            avg = np.average(ARR)
-            stdev = np.std(ARR)
-
-            for ip in ABS_IP_TIMESTAMP_OFFSETS:
-                if stdev != 0 and ((ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev > 2 or (ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev < -2):
-                    outliers.put((ip, ABS_IP_TIMESTAMP_OFFSETS[ip]))
             break
 
     # outlier detection part
-   
+    ARR = list(ABS_IP_TIMESTAMP_OFFSETS.values())
+            # print("Triggered!1")
+
+    if len(ARR) > 0:
+        # print("Triggered!2")
+        avg = np.average(ARR)
+        stdev = np.std(ARR)
+
+        for ip in ABS_IP_TIMESTAMP_OFFSETS:
+            if stdev != 0 and ((ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev >= 0 or (ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev <= 0):
+                outliers.put((ip, ABS_IP_TIMESTAMP_OFFSETS[ip]))
+            # else:
+            #     # print("Triggered!3")
 
 
 
