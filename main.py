@@ -16,7 +16,7 @@ with dev_list_lock:
 
 from sync.sync import outlier_lock, sync_log_lock
 with outlier_lock:
-    from sync.sync import out_of_sync, outliers
+    from sync.sync import out_of_sync
 with sync_log_lock:
     from sync.sync import sync_log
 from ip.ips import IP_IN_NETWORK
@@ -28,15 +28,15 @@ def main():
     ifaces.show()
 
     print("")
-    Config.NET_RANGE = "172.27.4.0/24"
-    Config.MY_IP = "172.27.4.127"
-    Config.MY_MAC = "e8:65:38:0e:2c:59"
-    Config.IFACE = "Realtek RTL8852BE WiFi 6 802.11ax PCIe Adapter"
+    # Config.NET_RANGE = "172.27.4.0/24"
+    # Config.MY_IP = "172.27.4.127"
+    # Config.MY_MAC = "e8:65:38:0e:2c:59"
+    # Config.IFACE = "Realtek RTL8852BE WiFi 6 802.11ax PCIe Adapter"
 
-    # Config.NET_RANGE = "172.17.15.0/24"
-    # Config.MY_IP = "172.17.15.103"
-    # Config.MY_MAC = "28:00:af:ae:9e:ab"
-    # Config.IFACE = "Realtek PCIe GbE Family Controller"
+    Config.NET_RANGE = "172.17.15.0/24"
+    Config.MY_IP = "172.17.15.103"
+    Config.MY_MAC = "28:00:af:ae:9e:ab"
+    Config.IFACE = "Realtek PCIe GbE Family Controller"
 
     # Config.NET_RANGE = input("Enter the network range to monitor:- ")
     # Config.MY_IP = input("Enter the IPv4 Address of this PC (Monitoring PC):- ")
@@ -146,31 +146,8 @@ def main():
 
                     except KeyboardInterrupt:
                         stop_event.set()
-                        print("Computing outliers...")
                         sync_thread.join()
                         # print(outliers.empty())
-
-                        if outliers.empty():
-                            print("All devices whom time-data were collected were found to be in sync!")
-                        else:
-
-                            while not outliers.empty():
-                                (ip, diff) = outliers.get()
-                                hours, rem = divmod(diff, 3600)
-                                minutes, seconds = divmod(rem, 60)
-                                # ms, 
-                                print(f"IP:- {ip} is out of sync by {hours}:{minutes}:{seconds} hours.")
-
-                            # print("Hellohii")
-
-                            with outliers.mutex:
-                                outliers.queue.clear()
-
-                            with sync_log.mutex:
-                                sync_log.queue.clear()
-
-                            with out_of_sync.mutex:
-                                out_of_sync.queue.clear()
 
                         print("\nReturning to main menu.")
                         break

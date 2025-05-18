@@ -22,7 +22,6 @@ sync_log_lock = threading.Lock()
 out_of_sync = queue.Queue()
 sync_log = queue.Queue()
 
-outliers = queue.Queue()
 
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 
@@ -34,7 +33,7 @@ def check_http_header_date(ip):
         http_res = requests.get(f"http://{ip}:80/", timeout=2)
         if 'date' in http_res.headers:
             epoch_time = int(parsedate_to_datetime(http_res.headers['date']).timestamp())
-            ABS_IP_TIMESTAMP_OFFSETS[ip] = abs((epoch_time - current_epoch) / 1000)
+            ABS_IP_TIMESTAMP_OFFSETS[ip] = abs(epoch_time - current_epoch)
             IP_TIMESTAMP[ip] = ("http", epoch_time) 
             return 0
     except requests.exceptions.RequestException:
@@ -44,7 +43,7 @@ def check_http_header_date(ip):
         https_res = requests.get(f"https://{ip}:443/", timeout=2, verify=False)
         if 'date' in https_res.headers:
             epoch_time = int(parsedate_to_datetime(https_res.headers['date']).timestamp())
-            ABS_IP_TIMESTAMP_OFFSETS[ip] = abs((epoch_time - current_epoch) / 1000)
+            ABS_IP_TIMESTAMP_OFFSETS[ip] = abs(epoch_time - current_epoch)
             IP_TIMESTAMP[ip] = ("http", epoch_time) 
             return 0
     except requests.exceptions.RequestException:
@@ -57,7 +56,7 @@ def check_icmp_ts(ip):
     res = sr1(IP(src=Config.MY_IP, dst=ip)/ICMP(type=13), timeout=2, verbose=0)
     if res and res.haslayer(ICMP):
         offset = abs(res[ICMP].ts_rx - res[ICMP].ts_ori)
-        ABS_IP_TIMESTAMP_OFFSETS[ip] = offset
+        ABS_IP_TIMESTAMP_OFFSETS[ip] = offset /1000
         IP_TIMESTAMP[ip] = ("icmp", res[ICMP].ts_rx)
         return 0
     else: 
@@ -68,6 +67,8 @@ def run_synchronize_test(stop_event):
 
     net_range = Config.NET_RANGE
     network = ipaddress.IPv4Network(net_range, strict=False)
+
+    # L = ["172.17.15.116"]
 
     for ip in network.hosts():
         ip = str(ip)
@@ -82,21 +83,40 @@ def run_synchronize_test(stop_event):
         else:
             break
 
+    
+    print("Computing outliers...")
     # outlier detection part
     ARR = list(ABS_IP_TIMESTAMP_OFFSETS.values())
             # print("Triggered!1")
 
+    f = False
+
     if len(ARR) > 0:
-        # print("Triggered!2")
         avg = np.average(ARR)
         stdev = np.std(ARR)
 
         for ip in ABS_IP_TIMESTAMP_OFFSETS:
-            if stdev != 0 and ((ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev >= 0 or (ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev <= 0):
-                outliers.put((ip, ABS_IP_TIMESTAMP_OFFSETS[ip]))
+            # print(avg)
+            # print(stdev)
+            # print((ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev)
+            # print("")
+            if stdev != 0 and ((ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev >= 1 or (ABS_IP_TIMESTAMP_OFFSETS[ip] - avg)/stdev <= -1):
+                f = True
+                hours, rem = divmod(ABS_IP_TIMESTAMP_OFFSETS[ip], 3600)
+                minutes, seconds = divmod(rem, 60)
+                # ms, 
+                print(f"IP:- {ip} is out of sync by {hours}:{minutes}:{seconds} hours.")
             # else:
             #     # print("Triggered!3")
+        
+    if not f:
+        print("All devices whom time-data were collected were found to be in sync!")
 
+        with sync_log.mutex:
+            sync_log.queue.clear()
+
+        with out_of_sync.mutex:
+            out_of_sync.queue.clear()
 
 
     
