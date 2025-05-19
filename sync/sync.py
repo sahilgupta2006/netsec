@@ -34,7 +34,7 @@ def check_http_header_date(ip):
         if 'date' in http_res.headers:
             epoch_time = int(parsedate_to_datetime(http_res.headers['date']).timestamp())
             ABS_IP_TIMESTAMP_OFFSETS[ip] = abs(epoch_time - current_epoch)
-            IP_TIMESTAMP[ip] = ("http", epoch_time) 
+            IP_TIMESTAMP[ip] = ("http", epoch_time, current_epoch) 
             return 0
     except requests.exceptions.RequestException:
         pass
@@ -44,7 +44,7 @@ def check_http_header_date(ip):
         if 'date' in https_res.headers:
             epoch_time = int(parsedate_to_datetime(https_res.headers['date']).timestamp())
             ABS_IP_TIMESTAMP_OFFSETS[ip] = abs(epoch_time - current_epoch)
-            IP_TIMESTAMP[ip] = ("http", epoch_time) 
+            IP_TIMESTAMP[ip] = ("http", epoch_time, current_epoch) 
             return 0
     except requests.exceptions.RequestException:
         pass
@@ -54,10 +54,11 @@ def check_http_header_date(ip):
 def check_icmp_ts(ip):
     global ABS_IP_TIMESTAMP_OFFSETS, IP_TIMESTAMP
     res = sr1(IP(src=Config.MY_IP, dst=ip)/ICMP(type=13), timeout=2, verbose=0)
+    current_epoch = int(datetime.now(timezone.utc).timestamp())
     if res and res.haslayer(ICMP):
         offset = abs(res[ICMP].ts_rx - res[ICMP].ts_ori)
         ABS_IP_TIMESTAMP_OFFSETS[ip] = offset /1000
-        IP_TIMESTAMP[ip] = ("icmp", res[ICMP].ts_rx)
+        IP_TIMESTAMP[ip] = ("icmp", res[ICMP].ts_rx, current_epoch)
         return 0
     else: 
         return
@@ -68,7 +69,7 @@ def run_synchronize_test(stop_event):
     net_range = Config.NET_RANGE
     network = ipaddress.IPv4Network(net_range, strict=False)
 
-    # L = ["172.17.15.116"]
+    # L = ["172.19.0.2"]
 
     for ip in network.hosts():
         ip = str(ip)

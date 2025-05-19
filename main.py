@@ -28,15 +28,15 @@ def main():
     ifaces.show()
 
     print("")
-    # Config.NET_RANGE = "172.27.4.0/24"
-    # Config.MY_IP = "172.27.4.127"
-    # Config.MY_MAC = "e8:65:38:0e:2c:59"
-    # Config.IFACE = "Realtek RTL8852BE WiFi 6 802.11ax PCIe Adapter"
+    Config.NET_RANGE = "172.29.0.0/24"
+    Config.MY_IP = "172.29.0.135"
+    Config.MY_MAC = "e8:65:38:0e:2c:59"
+    Config.IFACE = "Realtek RTL8852BE WiFi 6 802.11ax PCIe Adapter"
 
-    Config.NET_RANGE = "172.17.15.0/24"
-    Config.MY_IP = "172.17.15.103"
-    Config.MY_MAC = "28:00:af:ae:9e:ab"
-    Config.IFACE = "Realtek PCIe GbE Family Controller"
+    # Config.NET_RANGE = "172.17.15.0/24"
+    # Config.MY_IP = "172.17.15.103"
+    # Config.MY_MAC = "28:00:af:ae:9e:ab"
+    # Config.IFACE = "Realtek PCIe GbE Family Controller"
 
     # Config.NET_RANGE = input("Enter the network range to monitor:- ")
     # Config.MY_IP = input("Enter the IPv4 Address of this PC (Monitoring PC):- ")
@@ -123,7 +123,7 @@ def main():
                     
                     try:
                         if not out_of_sync.empty():
-                            (ip, (type, ts)) = out_of_sync.get()
+                            (ip, (type, ts, ts2)) = out_of_sync.get()
                             time_on_other_dev = ""
                             if type == "icmp":
                                 midnight_utc = datetime.now(timezone.utc).replace(
@@ -138,8 +138,9 @@ def main():
                                 time_on_other_dev = packet_time_utc.astimezone(local_tz)
                             else:
                                 time_on_other_dev = datetime.fromtimestamp(ts, timezone.utc)
-                    
-                            print(f"IP:- {ip} :- Time:- {time_on_other_dev}")
+
+                            time_on_this_dev = datetime.fromtimestamp(ts2, timezone.utc)
+                            print(f"IP:- {ip} | Time:- {time_on_other_dev} | Actual Time:- {time_on_this_dev}")
                         
                         elif not sync_log.empty():
                             print(sync_log.get())
