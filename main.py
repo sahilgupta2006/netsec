@@ -28,8 +28,8 @@ def main():
     ifaces.show()
 
     print("")
-    Config.NET_RANGE = "172.29.0.0/24"
-    Config.MY_IP = "172.29.0.135"
+    Config.NET_RANGE = "192.168.0.0/24"
+    Config.MY_IP = "192.168.0.223"
     Config.MY_MAC = "e8:65:38:0e:2c:59"
     Config.IFACE = "Realtek RTL8852BE WiFi 6 802.11ax PCIe Adapter"
 

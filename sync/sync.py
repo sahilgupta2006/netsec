@@ -69,9 +69,9 @@ def run_synchronize_test(stop_event):
     net_range = Config.NET_RANGE
     network = ipaddress.IPv4Network(net_range, strict=False)
 
-    # L = ["172.19.0.2"]
+    L = ["192.168.0.247"]
 
-    for ip in network.hosts():
+    for ip in L:
         ip = str(ip)
         if not stop_event.is_set():
             sync_log.put(f"\nChecking {ip}")
